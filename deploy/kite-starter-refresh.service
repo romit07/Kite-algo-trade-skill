@@ -1,0 +1,9 @@
+[Unit]
+Description=Refresh Kite session (user script)
+# Customize to obtain request_token securely — example only.
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/root/.config/kite-starter.env
+ExecStart=/bin/bash -lc 'test -f /run/kite-starter/request_token.txt && /opt/kite-starter/.venv/bin/kite-starter auth-exchange "$(cat /run/kite-starter/request_token.txt)"'

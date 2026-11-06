@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Kite Starter — Educational Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.45; color: #111; }
+    .banner { background: #fff3cd; border: 1px solid #e0c36b; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+    .danger { background: #fdecea; border: 1px solid #e8a598; }
+    code { background: #f4f4f4; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+    th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; font-size: 0.9rem; vertical-align: top; }
+    th { background: #f0f0f0; text-align: left; }
+    .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .card { flex: 1 1 280px; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }
+    button { padding: 0.4rem 0.75rem; margin-right: 0.5rem; margin-bottom: 0.35rem; cursor: pointer; }
+    .muted { color: #555; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <strong>Educational demo only — not financial advice.</strong>
+    {% if paper_trading %}
+    Paper trading is <strong>ON</strong> (simulated fills).
+    {% else %}
+    Paper trading is <strong>OFF</strong>.
+    {% if enable_live_orders and live_mode %}
+    <strong>Live order routing is enabled</strong> — you can send real orders through Kite Connect. Misconfiguration can lose money.
+    {% elif enable_live_orders %}
+    Live flag is on but routing is inactive (check <code>PAPER_TRADING=false</code>).
+    {% else %}
+    Live routing is <strong>disabled</strong> (<code>ENABLE_LIVE_ORDERS=false</code>).
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <h1>Kite Connect starter dashboard</h1>
+  <p class="muted">Use HTTPS and strong passwords in production. Place nginx in front (see <code>docs/04-deployment.md</code>). Configure postback URL to <code>/postback/kite</code> (optional <code>?secret=</code>).</p>
+
+  <div class="row">
+    <div class="card">
+      <h2>Session</h2>
+      <p>Logged in: <strong>{{ logged_in }}</strong></p>
+      <p>Paper trading: <strong>{{ paper_trading }}</strong></p>
+      <p>Live orders flag: <code>{{ enable_live_orders }}</code></p>
+      <p>Effective live routing: <strong>{{ live_mode }}</strong></p>
+      <p>Order tag prefix: <code>{{ order_tag_prefix }}</code></p>
+      <p>Kill-switch path: <code>{{ kill_switch_path }}</code> — present: <strong>{{ kill_switch }}</strong></p>
+    </div>
+    <div class="card">
+      <h2>Risk (today)</h2>
+      <p>Orders placed (paper + live increments): <strong>{{ orders_today }}</strong> / {{ max_orders }}</p>
+      <p>Realized P&amp;L (paper sim + live day P&amp;L sync when placing live): <strong>{{ realized_pnl }}</strong> INR</p>
+      <p>Max daily loss: <strong>{{ max_loss }}</strong> INR</p>
+    </div>
+    <div class="card">
+      <h2>Strategy</h2>
+      <p>Running: <strong>{{ strategy_running }}</strong></p>
+      <p>Last signal: <code>{{ last_signal or "—" }}</code></p>
+      <form method="post" action="/api/strategy/start">
+        <button type="submit">Start</button>
+      </form>
+      <form method="post" action="/api/strategy/stop">
+        <button type="submit">Stop</button>
+      </form>
+      <form method="post" action="/api/strategy/run-once">
+        <button type="submit">Run one step</button>
+      </form>
+      {% if last_run_message %}
+      <p class="muted">{{ last_run_message }}</p>
+      {% endif %}
+    </div>
+    <div class="card danger">
+      <h2>Emergency</h2>
+      <p class="muted">Creates kill-switch file, stops strategy, cancels open tagged orders, then MARKET squares day positions when logged in and live mode is on.</p>
+      <form method="post" action="/api/actions/kill-switch">
+        <button type="submit" style="background:#c0392b;color:#fff;border:0;">Kill switch</button>
+      </form>
+      <form method="post" action="/api/actions/square-off">
+        <button type="submit">Square off (cancel + exit)</button>
+      </form>
+    </div>
+  </div>
+
+  <h2>Profile</h2>
+  <pre>{{ profile_json }}</pre>
+
+  <h2>Positions (live)</h2>
+  <pre>{{ positions_json }}</pre>
+
+  <h2>Paper positions</h2>
+  <table>
+    <tr><th>Instrument</th><th>Qty</th><th>Avg</th><th>Updated</th></tr>
+    {% for p in paper_positions %}
+    <tr>
+      <td>{{ p.instrument_token }}</td>
+      <td>{{ p.quantity }}</td>
+      <td>{{ p.average_price }}</td>
+      <td>{{ p.last_updated }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Orders (recent — paper)</h2>
+  <table>
+    <tr><th>Time</th><th>Side</th><th>Qty</th><th>Inst</th><th>Price</th><th>ID</th></tr>
+    {% for o in paper_orders %}
+    <tr>
+      <td>{{ o.created_at }}</td>
+      <td>{{ o.side }}</td>
+      <td>{{ o.quantity }}</td>
+      <td>{{ o.instrument_token }}</td>
+      <td>{{ o.price }}</td>
+      <td>{{ o.paper_order_id }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Live order log (SQLite)</h2>
+  <table>
+    <tr><th>Time</th><th>Kind</th><th>Order</th><th>Tag</th><th>Error</th></tr>
+    {% for row in live_order_log %}
+    <tr>
+      <td>{{ row.created_at }}</td>
+      <td>{{ row.kind }}</td>
+      <td>{{ row.order_id }}</td>
+      <td>{{ row.tag }}</td>
+      <td>{{ row.error }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Orders (live — from Kite)</h2>
+  <pre>{{ orders_json }}</pre>
+
+  <h2>Margins (live)</h2>
+  <pre>{{ margins_json }}</pre>
+
+  <p class="muted">Exchange <code>request_token</code> at <code>POST /api/auth/exchange</code>, or <code>kite-starter auth-exchange</code>. Programmatic REST: <code>POST /api/orders/place</code> (Basic Auth).</p>
+</body>
+</html>

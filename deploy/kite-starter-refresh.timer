@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily Kite token refresh window (adjust schedule)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

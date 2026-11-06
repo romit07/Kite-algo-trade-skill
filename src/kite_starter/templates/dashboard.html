@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Kite Starter — Educational Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.45; color: #111; }
+    .banner { background: #fff3cd; border: 1px solid #e0c36b; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+    code { background: #f4f4f4; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+    th, td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; font-size: 0.9rem; vertical-align: top; }
+    th { background: #f0f0f0; text-align: left; }
+    .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .card { flex: 1 1 280px; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }
+    button { padding: 0.4rem 0.75rem; margin-right: 0.5rem; cursor: pointer; }
+    .muted { color: #555; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <strong>Educational demo only — not financial advice.</strong>
+    Paper trading is <strong>ON by default</strong>. Live order placement is not implemented in this
+    starter; enable <code>ENABLE_LIVE_ORDERS</code> only after you add your own guarded integration.
+  </div>
+
+  <h1>Kite Connect starter dashboard</h1>
+  <p class="muted">Use HTTPS and strong passwords in production. Place nginx in front (see <code>docs/04-deployment.md</code>).</p>
+
+  <div class="row">
+    <div class="card">
+      <h2>Session</h2>
+      <p>Logged in: <strong>{{ logged_in }}</strong></p>
+      <p>Paper trading: <strong>{{ paper_trading }}</strong></p>
+      <p>Live orders flag: <code>{{ enable_live_orders }}</code></p>
+      <p>Kill-switch path: <code>{{ kill_switch_path }}</code> — present: <strong>{{ kill_switch }}</strong></p>
+    </div>
+    <div class="card">
+      <h2>Risk (today)</h2>
+      <p>Orders placed: <strong>{{ orders_today }}</strong> / {{ max_orders }}</p>
+      <p>Realized P&amp;L (paper): <strong>{{ realized_pnl }}</strong> INR</p>
+      <p>Max daily loss: <strong>{{ max_loss }}</strong> INR</p>
+    </div>
+    <div class="card">
+      <h2>Strategy</h2>
+      <p>Running: <strong>{{ strategy_running }}</strong></p>
+      <p>Last signal: <code>{{ last_signal or "—" }}</code></p>
+      <form method="post" action="/api/strategy/start">
+        <button type="submit">Start</button>
+      </form>
+      <form method="post" action="/api/strategy/stop">
+        <button type="submit">Stop</button>
+      </form>
+      <form method="post" action="/api/strategy/run-once">
+        <button type="submit">Run one step</button>
+      </form>
+      {% if last_run_message %}
+      <p class="muted">{{ last_run_message }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2>Profile</h2>
+  <pre>{{ profile_json }}</pre>
+
+  <h2>Positions (live)</h2>
+  <pre>{{ positions_json }}</pre>
+
+  <h2>Paper positions</h2>
+  <table>
+    <tr><th>Instrument</th><th>Qty</th><th>Avg</th><th>Updated</th></tr>
+    {% for p in paper_positions %}
+    <tr>
+      <td>{{ p.instrument_token }}</td>
+      <td>{{ p.quantity }}</td>
+      <td>{{ p.average_price }}</td>
+      <td>{{ p.last_updated }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Orders (recent — paper)</h2>
+  <table>
+    <tr><th>Time</th><th>Side</th><th>Qty</th><th>Inst</th><th>Price</th><th>ID</th></tr>
+    {% for o in paper_orders %}
+    <tr>
+      <td>{{ o.created_at }}</td>
+      <td>{{ o.side }}</td>
+      <td>{{ o.quantity }}</td>
+      <td>{{ o.instrument_token }}</td>
+      <td>{{ o.price }}</td>
+      <td>{{ o.paper_order_id }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Orders (live — from Kite)</h2>
+  <pre>{{ orders_json }}</pre>
+
+  <h2>Margins (live)</h2>
+  <pre>{{ margins_json }}</pre>
+
+  <p class="muted">Exchange <code>request_token</code> at <code>POST /api/auth/exchange</code> JSON body, or use <code>kite-starter auth-exchange</code>.</p>
+</body>
+</html>

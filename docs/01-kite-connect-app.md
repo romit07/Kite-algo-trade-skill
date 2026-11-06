@@ -12,7 +12,9 @@ Numbered checklist for first-time setup. Replace every placeholder with your own
    - Local development: `http://127.0.0.1:8000/callback/kite`
    - Production: `https://YOUR_DOMAIN.example/callback/kite`
 4. Set **Postback URL** (if you use postbacks for order updates) to an HTTPS endpoint you control, for example:
-   - `https://YOUR_DOMAIN.example/postback/kite`
+   - `https://YOUR_DOMAIN.example/postback/kite`  
+   - Optional shared secret query param (set the same value as `KITE_POSTBACK_SECRET` in `.env`):  
+     `https://YOUR_DOMAIN.example/postback/kite?secret=YOUR_RANDOM_SHARED_SECRET`
 
 Zerodha may require app review for certain capabilities. Read their current documentation for subscription or approval notes — requirements change over time.
 

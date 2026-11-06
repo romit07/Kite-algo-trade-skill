@@ -59,6 +59,16 @@ class Database:
                   last_signal TEXT,
                   last_run TEXT
                 );
+                CREATE TABLE IF NOT EXISTS live_order_log (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  created_at TEXT NOT NULL,
+                  kind TEXT NOT NULL,
+                  order_id TEXT,
+                  tag TEXT,
+                  request_json TEXT NOT NULL,
+                  response_json TEXT,
+                  error TEXT
+                );
                 """
             )
             conn.execute(
@@ -190,6 +200,46 @@ class Database:
                 (limit,),
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def add_live_order_event(
+        self,
+        *,
+        kind: str,
+        order_id: str | None,
+        tag: str | None,
+        request_json: dict[str, Any],
+        response_json: Any,
+        error: str | None = None,
+    ) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        req_s = json.dumps(request_json, default=str)
+        resp_s = json.dumps(response_json, default=str) if response_json is not None else None
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "INSERT INTO live_order_log(created_at, kind, order_id, tag, request_json, response_json, error) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (now, kind, order_id, tag, req_s, resp_s, error),
+            )
+
+    def recent_live_order_events(self, limit: int = 80) -> list[dict[str, Any]]:
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM live_order_log ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def sync_live_day_pnl(self, net_pnl: float) -> None:
+        """Replace today's stored realized P&amp;L with live day P&amp;L from Zerodha."""
+        day = date.today().isoformat()
+        with self._lock, self._connect() as conn:
+            row = conn.execute("SELECT orders_placed FROM risk_day WHERE day = ?", (day,)).fetchone()
+            orders = int(row["orders_placed"]) if row else 0
+            conn.execute(
+                "INSERT INTO risk_day(day, orders_placed, realized_pnl) VALUES (?,?,?) "
+                "ON CONFLICT(day) DO UPDATE SET realized_pnl = excluded.realized_pnl",
+                (day, orders, float(net_pnl)),
+            )
 
 
 @dataclass

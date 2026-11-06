@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from ..config import Settings
 from ..db import Database
 from ..kite_client import KiteClientFactory
+from ..live_orders import LiveOrderService
 from ..paper import PaperBroker
 from ..strategies.demo_ema_crossover import DemoEmaCrossover
 
@@ -15,6 +16,7 @@ class AppState:
     db: Database
     kite_factory: KiteClientFactory
     paper: PaperBroker
+    live_orders: LiveOrderService
     strategy: DemoEmaCrossover
 
     @classmethod
@@ -22,12 +24,14 @@ class AppState:
         db = Database(settings.database_path)
         factory = KiteClientFactory(api_key=settings.kite_api_key)
         paper = PaperBroker(db, settings)
-        strategy = DemoEmaCrossover(settings, db, paper)
+        live_orders = LiveOrderService(settings, db)
+        strategy = DemoEmaCrossover(settings, db, paper, live_orders)
         return cls(
             settings=settings,
             db=db,
             kite_factory=factory,
             paper=paper,
+            live_orders=live_orders,
             strategy=strategy,
         )
 

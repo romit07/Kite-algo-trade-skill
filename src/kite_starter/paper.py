@@ -41,6 +41,8 @@ class PaperBroker:
             raise ValueError("side must be BUY or SELL")
         if quantity <= 0:
             raise ValueError("quantity must be positive")
+        if quantity > self._settings.max_order_quantity:
+            raise ValueError("quantity exceeds MAX_ORDER_QUANTITY")
 
         oid = f"PAPER-{uuid.uuid4().hex[:12]}"
         pos_qty, avg_price = self._get_position(instrument_token)

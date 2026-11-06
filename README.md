@@ -55,9 +55,19 @@ Open `http://127.0.0.1:8000` — you will be prompted for **Basic Auth** (`DASHB
 | Mode | Config |
 |------|--------|
 | Paper (default) | `PAPER_TRADING=true` — simulated fills in SQLite |
-| Live (not implemented in starter) | `PAPER_TRADING=false` and `ENABLE_LIVE_ORDERS=true` — you must add your own `place_order` wiring and compliance checks |
+| Live | `PAPER_TRADING=false` **and** `ENABLE_LIVE_ORDERS=true` — orders go through Kite Connect (`regular` variety) with tagging, logging, and risk checks |
 
-**Live orders require an explicit `ENABLE_LIVE_ORDERS=true` plus your own integration** — the demo code blocks live placement on purpose.
+See [Going live safely](docs/05-going-live-safely.md) before enabling live mode.
+
+### Live API (HTTP Basic on the dashboard credentials)
+
+- `POST /api/orders/place` — JSON body: `exchange`, `tradingsymbol`, `transaction_type`, `quantity`, `product`, `order_type` (`MARKET` | `LIMIT` | `SL` | `SL-M`), optional `price`, `trigger_price`, `validity`, `market_protection`
+- `POST /api/orders/modify`, `POST /api/orders/cancel`
+- `GET|POST /postback/kite` — Kite **postback URL** target (optional `?secret=` matching `KITE_POSTBACK_SECRET`)
+- `POST /api/actions/square-off` — cancel open orders whose **tag** starts with `ORDER_TAG_PREFIX`, then send **MARKET** exits for non-zero **day** positions (best-effort)
+- `POST /api/actions/kill-switch` — create kill-switch file, stop strategy, then cancel open tagged orders and square off (same behavior as Emergency when live + logged in)
+
+**MARKET** orders that are **rejected** for market-protection style reasons trigger a one-shot **LIMIT** retry at LTP ± `MARKET_FALLBACK_LIMIT_BUFFER_PCT`.
 
 ## Zero to EC2 dashboard (summary)
 

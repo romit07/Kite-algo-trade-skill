@@ -99,6 +99,14 @@ Follow `docs/04-deployment.md` to:
 - [ ] Monitor logs under `/var/log/kite-starter/` (see deploy docs).
 - [ ] Review Zerodha circulars / API changes regularly.
 
+## Phase H — Going live (only after paper validation)
+
+Read `docs/05-going-live-safely.md` and confirm:
+
+- `PAPER_TRADING=false` **and** `ENABLE_LIVE_ORDERS=true` together (no half-enabled states).
+- `ORDER_TAG_PREFIX` scopes mass-cancel / square-off to **your** orders only.
+- Postback URL registered to `https://YOUR_DOMAIN/postback/kite` with optional shared secret.
+
 ## Troubleshooting (short)
 
 | Symptom | Check |

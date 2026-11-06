@@ -13,6 +13,7 @@ from typing import Any
 from ..config import Settings
 from ..db import Database
 from ..kite_client import KiteLike
+from ..live_orders import LiveOrderService, PlaceParams
 from ..paper import PaperBroker
 
 
@@ -37,6 +38,7 @@ class DemoEmaCrossover:
     settings: Settings
     db: Database
     paper: PaperBroker
+    live_orders: LiveOrderService
 
     def run_once(self, kite: KiteLike | None) -> dict[str, Any]:
         """Compute one step. Uses historical data from Kite if available."""
@@ -44,6 +46,7 @@ class DemoEmaCrossover:
         interval = self.settings.strategy_bar_interval
         fast = self.settings.ema_fast
         slow = self.settings.ema_slow
+        qty = self.settings.strategy_order_quantity
 
         if fast >= slow:
             return {"ok": False, "error": "ema_fast must be smaller than ema_slow"}
@@ -92,29 +95,38 @@ class DemoEmaCrossover:
         self.db.set_last_signal(signal)
 
         execution: dict[str, Any] = {"mode": "none"}
+
         if self.settings.paper_trading:
             if signal == "BUY":
                 execution = self.paper.place_market_order(
-                    instrument, "BUY", quantity=1, last_price=last_close
+                    instrument, "BUY", quantity=qty, last_price=last_close
                 )
             elif signal == "SELL":
                 execution = self.paper.place_market_order(
-                    instrument, "SELL", quantity=1, last_price=last_close
+                    instrument, "SELL", quantity=qty, last_price=last_close
                 )
-        else:
-            if not self.settings.enable_live_orders:
-                execution = {
-                    "blocked": True,
-                    "reason": "Live orders disabled — set ENABLE_LIVE_ORDERS=true consciously",
-                }
+        elif self.live_orders.live_mode():
+            if signal in ("BUY", "SELL"):
+                params = PlaceParams(
+                    exchange=self.settings.strategy_exchange,
+                    tradingsymbol=self.settings.strategy_tradingsymbol,
+                    transaction_type=signal,
+                    quantity=qty,
+                    product=self.settings.strategy_product,
+                    order_type="MARKET",
+                    market_protection=-1,
+                )
+                try:
+                    execution = self.live_orders.place_order(kite, params, tag_suffix="demo")
+                except Exception as exc:  # noqa: BLE001
+                    execution = {"ok": False, "error": str(exc), "live": True}
             else:
-                execution = {
-                    "blocked": True,
-                    "reason": (
-                        "Live placement not implemented in this educational starter — "
-                        "wire `kite.place_order` yourself with product/exchange validation."
-                    ),
-                }
+                execution = {"mode": "live", "skipped": "HOLD"}
+        else:
+            execution = {
+                "blocked": True,
+                "reason": "Live orders disabled — set ENABLE_LIVE_ORDERS=true and PAPER_TRADING=false",
+            }
 
         return {
             "ok": True,

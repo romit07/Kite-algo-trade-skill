@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from kite_starter.config import Settings
 from kite_starter.db import Database
+from kite_starter.live_orders import LiveOrderService
 from kite_starter.paper import PaperBroker
 from kite_starter.risk import RiskError
 from kite_starter.strategies.demo_ema_crossover import DemoEmaCrossover
@@ -43,7 +44,8 @@ def test_demo_strategy_runs_paper_buy_sell(tmp_path):
     )
     db = Database(settings.database_path)
     paper = PaperBroker(db, settings)
-    strat = DemoEmaCrossover(settings, db, paper)
+    live = LiveOrderService(settings, db)
+    strat = DemoEmaCrossover(settings, db, paper, live)
     kite = FakeKite()
     res = strat.run_once(kite)
     assert res["ok"] is True

@@ -21,6 +21,8 @@ class KiteLike(Protocol):
 
     def instruments(self, exchange: str | None = None) -> list[dict[str, Any]]: ...
 
+    def quote(self, *instruments: str) -> dict[str, Any]: ...
+
     def historical_data(
         self,
         instrument_token: int,
@@ -43,6 +45,12 @@ class KiteLike(Protocol):
         validity: str | None = None,
         **kwargs: Any,
     ) -> str: ...
+
+    def modify_order(self, variety: str, order_id: str, **kwargs: Any) -> str: ...
+
+    def cancel_order(self, variety: str, order_id: str, parent_order_id: str | None = None) -> str: ...
+
+    def order_history(self, order_id: str) -> list[dict[str, Any]] | dict[str, Any]: ...
 
 
 @dataclass

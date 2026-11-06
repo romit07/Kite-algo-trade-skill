@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         default="http://127.0.0.1:8000/callback/kite",
         alias="KITE_REDIRECT_URL",
     )
+    kite_postback_secret: str | None = Field(default=None, alias="KITE_POSTBACK_SECRET")
     kite_login_url: str | None = Field(default=None, alias="KITE_LOGIN_URL")
 
     zerodha_user_id: str | None = Field(default=None, alias="ZERODHA_USER_ID")
@@ -31,7 +32,15 @@ class Settings(BaseSettings):
 
     max_daily_loss_inr: float = Field(default=5000.0, alias="MAX_DAILY_LOSS_INR")
     max_orders_per_day: int = Field(default=20, alias="MAX_ORDERS_PER_DAY")
+    max_order_quantity: int = Field(default=1, alias="MAX_ORDER_QUANTITY")
     kill_switch_path: str = Field(default="/tmp/kite-starter-kill-switch", alias="KILL_SWITCH_PATH")
+
+    order_tag_prefix: str = Field(default="ks", alias="ORDER_TAG_PREFIX")
+    market_fallback_limit_buffer_pct: float = Field(default=0.15, alias="MARKET_FALLBACK_LIMIT_BUFFER_PCT")
+    order_poll_interval_sec: float = Field(default=0.5, alias="ORDER_POLL_INTERVAL_SEC")
+    order_poll_max_wait_sec: float = Field(default=45.0, alias="ORDER_POLL_MAX_WAIT_SEC")
+    network_retry_attempts: int = Field(default=2, alias="NETWORK_RETRY_ATTEMPTS")
+    network_retry_delay_sec: float = Field(default=0.75, alias="NETWORK_RETRY_DELAY_SEC")
 
     dashboard_user: str = Field(default="admin", alias="DASHBOARD_USER")
     dashboard_password: str = Field(default="change_me", alias="DASHBOARD_PASSWORD")
@@ -41,6 +50,10 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, alias="PORT")
 
     strategy_instrument_token: int = Field(default=256265, alias="STRATEGY_INSTRUMENT_TOKEN")
+    strategy_exchange: str = Field(default="NSE", alias="STRATEGY_EXCHANGE")
+    strategy_tradingsymbol: str = Field(default="NIFTY 50", alias="STRATEGY_TRADINGSYMBOL")
+    strategy_product: str = Field(default="MIS", alias="STRATEGY_PRODUCT")
+    strategy_order_quantity: int = Field(default=1, alias="STRATEGY_ORDER_QUANTITY")
     strategy_bar_interval: str = Field(default="day", alias="STRATEGY_BAR_INTERVAL")
     ema_fast: int = Field(default=9, alias="EMA_FAST")
     ema_slow: int = Field(default=21, alias="EMA_SLOW")
